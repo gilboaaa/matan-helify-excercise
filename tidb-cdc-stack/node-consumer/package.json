@@ -1,0 +1,16 @@
+{
+  "name": "node-consumer",
+  "version": "1.0.0",
+  "description": "TiDB CDC Kafka consumer with Prometheus metrics",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js"
+  },
+  "dependencies": {
+    "express": "^4.19.2",
+    "kafkajs": "^2.2.4",
+    "prom-client": "^15.1.1"
+  },
+  "author": "Matan Gilboa",
+  "license": "MIT"
+}

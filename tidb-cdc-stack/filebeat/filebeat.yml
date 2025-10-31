@@ -1,0 +1,26 @@
+filebeat.inputs:
+  - type: filestream
+    id: node-consumer-logs
+    enabled: true
+    paths:
+      - /var/lib/docker/containers/92e71127acbe*/92e71127acbe*-json.log
+    json.keys_under_root: true
+    json.add_error_key: true
+
+    # סינון: רק שורות שיש בהן "cdc event"
+    processors:
+      - drop_event:
+          when:
+            not:
+              or:
+                - contains:
+                    message: "cdc event"
+                - contains:
+                    message: "CDC_EVENT"
+                - contains:
+                    message: "cdc_event"
+
+output.elasticsearch:
+  hosts: ["http://elasticsearch:9200"]
+  indices:
+    - index: "filebeat-cdc-%{+yyyy.MM.dd}"
