@@ -142,18 +142,89 @@ services:
     restart: unless-stopped
 
   filebeat:
-    image: docker.elastic.co/beats/filebeat:8.14.3
+    image: elastic/filebeat:8.14.3
     user: root
-    command: ["filebeat","--strict.perms=false", "-e"]
-    depends_on:
-      - elasticsearch
-      - node-consumer
+    command: ["--strict.perms=false", "-e"]
     volumes:
       - ./filebeat/filebeat.yml:/usr/share/filebeat/filebeat.yml:ro
-      - /var/docker/containers:/var/docker/containers/:ro
-    restart: unless-stopped
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      - /var/lib/docker/containers:/var/lib/docker/containers:ro
+    depends_on:
+      - elasticsearch
+    # (רשות) הרשאות עזר לקריאת קבצים/סימלינקים
+    # cap_add:
+    #   - DAC_READ_SEARCH
+    #   - CHOWN
 
+    # --- JOB 1: אתחול בסיס נתונים ---
+  db-init:
+    image: pingcap/tidb:v7.5.0
+    depends_on:
+      tidb:
+        condition: service_healthy
+    volumes:
+      - ./db/init.sql:/init.sql:ro
+    entrypoint: [ "sh", "-lc" ]
+    command: >
+      '
+      echo "[db-init] waiting for TiDB...";
+      for i in $(seq 1 60); do
+        mysql -htidb -P4000 -uroot -e "SELECT 1" >/dev/null 2>&1 && break;
+        sleep 2;
+      done;
+      echo "[db-init] applying init.sql";
+      mysql -htidb -P4000 -uroot < /init.sql
+      '
+    restart: "no"
 
+  # --- JOB 2: יצירת topic בקאפקה (בטוח גם אם קיים) ---
+  kafka-init:
+    image: apache/kafka:3.8.0
+    depends_on:
+      kafka:
+        condition: service_healthy
+    entrypoint: [ "bash", "-lc" ]
+    command: >
+      '
+      echo "[kafka-init] ensuring topic tidb-cdc exists";
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --create --topic tidb-cdc --partitions 1 --replication-factor 1 || true;
+      /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list;
+      '
+    restart: "no"
+
+  # --- JOB 3: יצירת changefeed ב-TiCDC ---
+  ticdc-init:
+    image: pingcap/ticdc:v7.5.0
+    depends_on:
+      pd:
+        condition: service_healthy
+      ticdc:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    entrypoint: [ "sh", "-lc" ]
+    command: >
+      '
+      echo "[ticdc-init] wait for PD & Kafka";
+      for i in $(seq 1 60); do
+        wget -qO- http://pd:2379/pd/api/v1/status >/dev/null 2>&1 && break;
+        sleep 2;
+      done;
+      # בדיקת חיבור בסיסית לקאפקה (TCP) – אופציונלי
+      (echo > /dev/tcp/kafka/9092) >/dev/null 2>&1 || sleep 2;
+
+      echo "[ticdc-init] creating changefeed if not exists";
+      /cdc cli changefeed list --server=http://ticdc:8300 | grep -q "\"id\": \"c1\"" \
+        || /cdc cli changefeed create \
+             --server=http://ticdc:8300 \
+             --changefeed-id=c1 \
+             --sink-uri="kafka://kafka:9092/tidb-cdc?protocol=canal-json&max-message-bytes=1048576";
+
+      echo "[ticdc-init] current changefeeds:";
+      /cdc cli changefeed list --server=http://ticdc:8300;
+
+      '
+    restart: "no"
 
 
 

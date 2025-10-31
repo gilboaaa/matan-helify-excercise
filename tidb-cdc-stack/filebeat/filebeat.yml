@@ -1,26 +1,44 @@
-filebeat.inputs:
-  - type: filestream
-    id: node-consumer-logs
-    enabled: true
-    paths:
-      - /var/lib/docker/containers/92e71127acbe*/92e71127acbe*-json.log
-    json.keys_under_root: true
-    json.add_error_key: true
+# ===== Autodiscover from Docker =====
+filebeat.autodiscover:
+  providers:
+    - type: docker
+      host: "unix:///var/run/docker.sock"
+      hints.enabled: false
+      templates:
+        - condition:
+            equals:
+              docker.container.labels.com_docker_compose_service: "node-consumer"
+          config:
+            - type: container
+              # קורא את קובץ הלוג JSON של הקונטיינר הספציפי
+              paths:
+                - /var/lib/docker/containers/${data.docker.container.id}/*-json.log
+              stream: all
+              symlinks: true
+              processors:
+                - add_docker_metadata: ~
+                # השאר רק הודעות שמכילות "cdc event" (רגיש לאותיות – אפשר להרחיב למטה)
+                - drop_event:
+                    when:
+                      not:
+                        or:
+                          - contains:
+                              message: "cdc event"
+                          - contains:
+                              message: "CDC event"
+                          - contains:
+                              message: "cdc_event"
 
-    # סינון: רק שורות שיש בהן "cdc event"
-    processors:
-      - drop_event:
-          when:
-            not:
-              or:
-                - contains:
-                    message: "cdc event"
-                - contains:
-                    message: "CDC_EVENT"
-                - contains:
-                    message: "cdc_event"
-
+# ===== Outputs =====
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
-  indices:
-    - index: "filebeat-cdc-%{+yyyy.MM.dd}"
+  # אם צריך משתמש/סיסמה:
+  # username: "elastic"
+  # password: "changeme"
+
+# ===== (אופציונלי) Debug לוגים של Filebeat עצמו =====
+logging.level: info
+# logging.selectors: ["*"]
+# output.console:
+#   enable: true
+#   pretty: true
