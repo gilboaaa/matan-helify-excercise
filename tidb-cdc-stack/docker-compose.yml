@@ -66,6 +66,11 @@ services:
       - pd
       - tikv
       - tidb
+    healthcheck:
+      test: ["CMD", "sh", "-lc", "wget -qO- http://ticdc:8300/api/v2/status | grep -q '\"is_owner\": true'"]
+      interval: 5s
+      timeout: 3s
+      retries: 40
 
 
   kafka:
