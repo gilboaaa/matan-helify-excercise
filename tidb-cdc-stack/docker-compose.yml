@@ -181,6 +181,7 @@ services:
     entrypoint: [ "sh", "-lc" ]
     command: >
       '
+      yum install -y mysql
       echo "[db-init] waiting for TiDB...";
       for i in $(seq 1 60); do
         mysql -htidb -P4000 -uroot -e "SELECT 1" >/dev/null 2>&1 && break;
