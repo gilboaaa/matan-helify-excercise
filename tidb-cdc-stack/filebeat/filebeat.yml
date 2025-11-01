@@ -23,7 +23,12 @@ filebeat.autodiscover:
                     target: "cdc"
                     overwrite_keys: true
                 - drop_fields:
-                    fields: ["log", "stream", "container", "docker", "input", "ecs", "host", "agent"]
+                    fields: ["log", "stream", "container", "docker", "input", "ecs", "host", "agent","agent.ephemeral_id", "agent.id", "agent.version", "agent.type","_id","_index", "_type","sort"]
+                - drop_event:
+                    when:
+                      not:
+                        contains:
+                          message: "cdc-event"
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
