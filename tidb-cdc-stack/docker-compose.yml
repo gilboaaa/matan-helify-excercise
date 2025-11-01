@@ -177,14 +177,16 @@ services:
   db-init:
     image: pingcap/tidb:v7.5.0
     depends_on:
-      - tidb:
+      tidb:
         condition: service_healthy
-      - kafka:
+      kafka:
         condition: service_healthy
-      - ticdc:
+      ticdc:
         condition: service_healthy
-      - kafka-init
-      - ticdc-init
+      kafka-init:
+        condition: service_healthy
+      ticdc-init:
+        condition: service_healthy
     volumes:
       - ./db/init.sql:/init.sql:ro
     entrypoint: [ "sh", "-lc" ]
