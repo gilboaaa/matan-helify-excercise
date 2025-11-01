@@ -24,8 +24,6 @@ filebeat.autodiscover:
                     overwrite_keys: true
                 - drop_fields:
                     fields: ["log", "stream", "container", "docker", "input", "ecs", "host", "agent"]
-                - keep_fields:
-                    fields: ["@timestamp", "cdc", "message"]
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
