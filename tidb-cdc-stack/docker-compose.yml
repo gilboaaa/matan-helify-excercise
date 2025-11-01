@@ -32,9 +32,12 @@ services:
         soft: 1048576
         hard: 1048576
     depends_on:
-      - pd
+      pd:
+        condition: service_healthy
     volumes:
       - tikv-data:/data
+    healthcheck:
+      test: [ "CMD", "sh", "-lc", "</dev/tcp/127.0.0.1/20160" ]
 
   tidb:
     image: pingcap/tidb:v7.5.0
@@ -47,10 +50,12 @@ services:
       - "127.0.0.1:4000:4000" # MySQL protocol - local only
       - "127.0.0.1:10080:10080" # status - local only
     depends_on:
-      - pd
-      - tikv
+      - pd:
+          condition: service_healthy
+      - tikv:
+          condition: service_healthy
     healthcheck:
-      test: [ "CMD", "sh", "-c", "echo matan" ]
+      test: [ "CMD", "sh", "-lc", "</dev/tcp/127.0.0.1/4000" ]
       interval: 5s
       timeout: 3s
       retries: 60
@@ -67,9 +72,10 @@ services:
     ports:
       - "127.0.0.1:8300:8300"
     depends_on:
-      - pd
-      - tikv
-      - tidb
+      - pd:
+        condition: service_healthy
+      - tidb:
+          condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-lc", "wget -qO- http://ticdc:8300/api/v2/status | grep -q '\"is_owner\": true'"]
       interval: 5s
@@ -109,9 +115,12 @@ services:
       GROUP_ID: "cdc-node-consumer-group"
       PROM_PORT: "3000"
     depends_on:
-      - kafka
+      - kafka:
+          condition: service_healthy
+      - ticdc:
+          condition: service_healthy
     ports:
-      - "3000:3000"   # כדי שתוכל לראות /metrics ו-/healthz מה־host
+      - "3000:3000"
     restart: unless-stopped
     labels:
       co.elastic.logs/enabled: "true"
@@ -123,8 +132,6 @@ services:
       - '--config.file=/etc/prometheus/prometheus.yml'
     volumes:
       - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
-    depends_on:
-      - node-consumer
     ports:
       - "9090:9090"
     restart: unless-stopped
@@ -165,19 +172,19 @@ services:
       - /var/lib/docker/containers:/var/lib/docker/containers:ro
     depends_on:
       - elasticsearch
-    # (רשות) הרשאות עזר לקריאת קבצים/סימלינקים
-    # cap_add:
-    #   - DAC_READ_SEARCH
-    #   - CHOWN
 
     # --- JOB 1: אתחול בסיס נתונים ---
   db-init:
     image: pingcap/tidb:v7.5.0
     depends_on:
-      tidb:
+      - tidb:
         condition: service_healthy
-      ticdc-init:
-        condition: service_completed_successfully
+      - kafka:
+        condition: service_healthy
+      - ticdc:
+        condition: service_healthy
+      - kafka-init
+      - ticdc-init
     volumes:
       - ./db/init.sql:/init.sql:ro
     entrypoint: [ "sh", "-lc" ]
