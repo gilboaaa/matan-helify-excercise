@@ -119,6 +119,10 @@ services:
         condition: service_healthy
       ticdc:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
+      ticdc-init:
+        condition: service_completed_successfully
     ports:
       - "3000:3000"
     restart: unless-stopped
