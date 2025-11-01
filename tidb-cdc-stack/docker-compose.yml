@@ -50,10 +50,10 @@ services:
       - "127.0.0.1:4000:4000" # MySQL protocol - local only
       - "127.0.0.1:10080:10080" # status - local only
     depends_on:
-      - pd:
-          condition: service_healthy
-      - tikv:
-          condition: service_healthy
+      pd:
+        condition: service_healthy
+      tikv:
+        condition: service_healthy
     healthcheck:
       test: [ "CMD", "sh", "-lc", "</dev/tcp/127.0.0.1/4000" ]
       interval: 5s
@@ -72,10 +72,10 @@ services:
     ports:
       - "127.0.0.1:8300:8300"
     depends_on:
-      - pd:
+      pd:
         condition: service_healthy
-      - tidb:
-          condition: service_healthy
+      tidb:
+        condition: service_healthy
     healthcheck:
       test: ["CMD", "sh", "-lc", "wget -qO- http://ticdc:8300/api/v2/status | grep -q '\"is_owner\": true'"]
       interval: 5s
@@ -115,10 +115,10 @@ services:
       GROUP_ID: "cdc-node-consumer-group"
       PROM_PORT: "3000"
     depends_on:
-      - kafka:
-          condition: service_healthy
-      - ticdc:
-          condition: service_healthy
+      kafka:
+        condition: service_healthy
+      ticdc:
+        condition: service_healthy
     ports:
       - "3000:3000"
     restart: unless-stopped
