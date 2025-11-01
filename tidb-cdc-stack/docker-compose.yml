@@ -128,6 +128,11 @@ services:
     restart: unless-stopped
     labels:
       co.elastic.logs/enabled: "true"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
 
   prometheus:
@@ -191,6 +196,8 @@ services:
         condition: service_completed_successfully
       ticdc-init:
         condition: service_completed_successfully
+      node-consumer:
+        condition: service_healthy
     volumes:
       - ./db/init.sql:/init.sql:ro
     entrypoint: [ "sh", "-lc" ]
