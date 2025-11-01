@@ -196,8 +196,6 @@ services:
         condition: service_completed_successfully
       ticdc-init:
         condition: service_completed_successfully
-      node-consumer:
-        condition: service_healthy
       prometheus:
         condition: service_started
       filebeat:
