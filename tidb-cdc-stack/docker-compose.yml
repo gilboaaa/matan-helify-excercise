@@ -199,9 +199,9 @@ services:
       node-consumer:
         condition: service_healthy
       prometheus:
-        condition: service_running
+        condition: service_started
       filebeat:
-        condition: service_running
+        condition: service_started
     volumes:
       - ./db/init.sql:/init.sql:ro
     entrypoint: [ "sh", "-lc" ]
