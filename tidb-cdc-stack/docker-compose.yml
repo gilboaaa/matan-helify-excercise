@@ -176,6 +176,8 @@ services:
     depends_on:
       tidb:
         condition: service_healthy
+      ticdc-init:
+        condition: service_completed_successfully
     volumes:
       - ./db/init.sql:/init.sql:ro
     entrypoint: [ "sh", "-lc" ]
@@ -217,6 +219,8 @@ services:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      kafka-init:
+        condition: service_completed_successfully
     entrypoint: [ "sh", "-lc" ]
     command: >
       '
