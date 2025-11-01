@@ -27,7 +27,7 @@ filebeat.autodiscover:
                           - contains:
                               message: "CDC event"
                           - contains:
-                              message: "cdc_event"
+                              message: "cdc-event"
 
 # ===== Outputs =====
 output.elasticsearch:
