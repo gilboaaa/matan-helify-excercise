@@ -14,12 +14,9 @@ filebeat.autodiscover:
               paths:
                 - /var/lib/docker/containers/${data.docker.container.id}/*.log
               parsers:
-                - ndjson:
-                    target: ""
-
-# הוספת docker metadata
-processors:
-  - add_docker_metadata: ~
+                - container:
+                    type: docker
+                    target: "json"
 
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
