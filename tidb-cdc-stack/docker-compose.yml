@@ -129,7 +129,7 @@ services:
     labels:
       co.elastic.logs/enabled: "true"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:3000/healthz"]
+      test: ["CMD","sh", "-lc", "curl -f http://localhost:3000/healthz"]
       interval: 10s
       timeout: 5s
       retries: 5
