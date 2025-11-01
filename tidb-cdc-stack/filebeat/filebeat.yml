@@ -1,44 +1,25 @@
-# ===== Autodiscover from Docker =====
 filebeat.autodiscover:
   providers:
     - type: docker
-      host: "unix:///var/run/docker.sock"
-      hints.enabled: false
+      hints.enabled: true
+      include_containers:
+        - "node-consumer"   # שם הקונטיינר שלך
       templates:
         - condition:
-            equals:
-              docker.container.labels.com_docker_compose_service: "node-consumer"
+            contains:
+              docker.container.name: "tidb-cdc-stack-node-consumer-1"
           config:
-            - type: container
-              # קורא את קובץ הלוג JSON של הקונטיינר הספציפי
+            - type: filestream
+              enabled: true
               paths:
-                - /var/lib/docker/containers/${data.docker.container.id}/*-json.log
-              stream: all
-              symlinks: true
-              processors:
-                - add_docker_metadata: ~
-                # השאר רק הודעות שמכילות "cdc event" (רגיש לאותיות – אפשר להרחיב למטה)
-                - drop_event:
-                    when:
-                      not:
-                        or:
-                          - contains:
-                              message: "cdc event"
-                          - contains:
-                              message: "CDC event"
-                          - contains:
-                              message: "cdc-event"
+                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+              parsers:
+                - ndjson:
+                    target: ""
 
-# ===== Outputs =====
+# הוספת docker metadata
+processors:
+  - add_docker_metadata: ~
+
 output.elasticsearch:
   hosts: ["http://elasticsearch:9200"]
-  # אם צריך משתמש/סיסמה:
-  # username: "elastic"
-  # password: "changeme"
-
-# ===== (אופציונלי) Debug לוגים של Filebeat עצמו =====
-logging.level: info
-# logging.selectors: ["*"]
-# output.console:
-#   enable: true
-#   pretty: true
